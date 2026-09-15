@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+paddleocr
+paddlepaddle
+pillow
+requests
+python-multipart
+python-docx
+PyMuPDF
+langdetect
+pytest
