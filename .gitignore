@@ -152,5 +152,9 @@ output/
 *.pdf
 *.docx
 
+# ...except README screenshots
+!docs/screenshots/
+!docs/screenshots/*.png
+
 # Logs
 *.log

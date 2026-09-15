@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configurable environment variables
 
 ### Changed
-- Complete API redesign with FastAPI 2.0
+- Complete API redesign, bumping the service version to 2.0.0
 - Improved OCR performance with mobile models
 - Enhanced response format with detailed metadata
 - Better resource management and cleanup
