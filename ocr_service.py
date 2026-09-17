@@ -1,5 +1,5 @@
 from statistics import mean
-from typing import Dict, List, Optional
+from typing import Any, Dict, List
 
 from paddleocr import PaddleOCR
 
@@ -59,7 +59,9 @@ class OCRModelManager:
         }
 
         if lang in self.RECOGNITION_MODEL_OVERRIDES:
-            kwargs["text_recognition_model_name"] = self.RECOGNITION_MODEL_OVERRIDES[lang]
+            kwargs["text_recognition_model_name"] = self.RECOGNITION_MODEL_OVERRIDES[
+                lang
+            ]
         else:
             kwargs["lang"] = lang
 
@@ -74,7 +76,9 @@ class OCRModelManager:
         }
 
         if lang in self.RECOGNITION_MODEL_OVERRIDES:
-            kwargs["text_recognition_model_name"] = self.RECOGNITION_MODEL_OVERRIDES[lang]
+            kwargs["text_recognition_model_name"] = self.RECOGNITION_MODEL_OVERRIDES[
+                lang
+            ]
         else:
             kwargs["ocr_version"] = "PP-OCRv5"
             kwargs["lang"] = lang
@@ -86,7 +90,7 @@ class OCRModelManager:
         image_path: str,
         lang: str = "ar",
         confidence_threshold: float = 0.75,
-    ) -> Dict[str, object]:
+    ) -> Dict[str, Any]:
         lang = lang.lower()
         if lang == "auto":
             lang = "ar"
@@ -96,7 +100,10 @@ class OCRModelManager:
         escalated = False
         model_used = "basic"
 
-        if metrics["avg_confidence"] < confidence_threshold or metrics["recognized_words"] == 0:
+        if (
+            metrics["avg_confidence"] < confidence_threshold
+            or metrics["recognized_words"] == 0
+        ):
             escalated = True
             model_used = "escalated"
             escalated_model = self.get_escalated_model(lang)
@@ -112,7 +119,7 @@ class OCRModelManager:
             "average_confidence": metrics["avg_confidence"],
         }
 
-    def _run_model(self, model: PaddleOCR, image_path: str) -> List[Dict[str, object]]:
+    def _run_model(self, model: PaddleOCR, image_path: str) -> List[Dict[str, Any]]:
         return model.predict(
             image_path,
             text_det_limit_side_len=self.text_det_limit_side_len,
@@ -131,14 +138,10 @@ class OCRModelManager:
             return_word_box=False,
         )
 
-        return " ".join(
-            text
-            for item in result
-            for text in item.get("rec_texts", [])
-        )
+        return " ".join(text for item in result for text in item.get("rec_texts", []))
 
-    def _format_predictions(self, result: List[Dict[str, object]]) -> List[Dict[str, object]]:
-        predictions: List[Dict[str, object]] = []
+    def _format_predictions(self, result: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        predictions: List[Dict[str, Any]] = []
         for item in result:
             rec_texts = item.get("rec_texts", [])
             rec_scores = item.get("rec_scores", [])
@@ -159,16 +162,14 @@ class OCRModelManager:
 
     def group_predictions_into_rows(
         self,
-        predictions: List[Dict[str, object]],
+        predictions: List[Dict[str, Any]],
         y_tolerance: float = 5.0,
-    ) -> List[Dict[str, object]]:
+    ) -> List[Dict[str, Any]]:
         """Group predictions into rows based on Y-coordinate proximity."""
         if not predictions:
             return []
 
-        predictions_with_bbox = [
-            p for p in predictions if p.get("bbox")
-        ]
+        predictions_with_bbox = [p for p in predictions if p.get("bbox")]
         if not predictions_with_bbox:
             return []
 
@@ -177,8 +178,8 @@ class OCRModelManager:
             key=lambda p: (p["bbox"]["y1"], p["bbox"]["x1"]),
         )
 
-        rows: List[Dict[str, object]] = []
-        current_row: List[Dict[str, object]] = []
+        rows: List[Dict[str, Any]] = []
+        current_row: List[Dict[str, Any]] = []
         current_y_start = None
         current_y_end = None
 
@@ -194,25 +195,29 @@ class OCRModelManager:
                 current_row.append(pred)
                 current_y_end = max(current_y_end, y2)
             else:
-                rows.append({
-                    "y_start": current_y_start,
-                    "y_end": current_y_end,
-                    "items": current_row,
-                })
+                rows.append(
+                    {
+                        "y_start": current_y_start,
+                        "y_end": current_y_end,
+                        "items": current_row,
+                    }
+                )
                 current_y_start = y1
                 current_y_end = y2
                 current_row = [pred]
 
         if current_row:
-            rows.append({
-                "y_start": current_y_start,
-                "y_end": current_y_end,
-                "items": current_row,
-            })
+            rows.append(
+                {
+                    "y_start": current_y_start,
+                    "y_end": current_y_end,
+                    "items": current_row,
+                }
+            )
 
         return rows
 
-    def _evaluate(self, result: List[Dict[str, object]]) -> Dict[str, float]:
+    def _evaluate(self, result: List[Dict[str, Any]]) -> Dict[str, float]:
         scores: List[float] = []
         count = 0
         for item in result:

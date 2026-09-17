@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Any, Dict
 
 from langdetect import DetectorFactory, detect_langs
 
@@ -6,7 +6,7 @@ DetectorFactory.seed = 0
 
 
 class LanguageDetector:
-    def detect(self, text: str) -> Dict[str, object]:
+    def detect(self, text: str) -> Dict[str, Any]:
         text = (text or "").strip()
         if not text:
             return {"language": "und", "confidence": 0.0}

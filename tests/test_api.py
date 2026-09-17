@@ -1,6 +1,4 @@
 import io
-import tempfile
-from pathlib import Path
 
 import fitz
 import pytest
@@ -82,8 +80,12 @@ def test_ocr_service_escalates(monkeypatch):
         def predict(self, *args, **kwargs):
             return []
 
-    monkeypatch.setattr(OCRModelManager, "_build_basic_model", lambda self, lang: DummyModel())
-    monkeypatch.setattr(OCRModelManager, "_build_escalated_model", lambda self, lang: DummyModel())
+    monkeypatch.setattr(
+        OCRModelManager, "_build_basic_model", lambda self, lang: DummyModel()
+    )
+    monkeypatch.setattr(
+        OCRModelManager, "_build_escalated_model", lambda self, lang: DummyModel()
+    )
 
     manager = OCRModelManager(device="cpu", text_det_limit_side_len=640)
     call_count = {"count": 0}

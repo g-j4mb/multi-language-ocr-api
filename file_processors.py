@@ -1,6 +1,6 @@
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from io import BytesIO
 
 import fitz
@@ -15,7 +15,7 @@ class FileProcessor:
         self.temp_dir = Path(temp_dir or tempfile.gettempdir())
         self.temp_dir.mkdir(parents=True, exist_ok=True)
 
-    def process_file(self, file_path: Path) -> Dict[str, object]:
+    def process_file(self, file_path: Path) -> Dict[str, Any]:
         suffix = file_path.suffix.lower()
         if suffix in IMAGE_EXTENSIONS:
             return {
@@ -50,10 +50,12 @@ class FileProcessor:
         document.close()
         return images
 
-    def _process_docx(self, file_path: Path) -> Dict[str, object]:
+    def _process_docx(self, file_path: Path) -> Dict[str, Any]:
         document = Document(str(file_path))
         extracted_text = "\n".join(
-            paragraph.text for paragraph in document.paragraphs if paragraph.text.strip()
+            paragraph.text
+            for paragraph in document.paragraphs
+            if paragraph.text.strip()
         )
         image_paths: List[Path] = []
         for rel in document.part._rels.values():
@@ -61,7 +63,9 @@ class FileProcessor:
                 continue
             image_bytes = rel.target_part.blob
             image = Image.open(BytesIO(image_bytes)).convert("RGB")
-            image_path = self.temp_dir / f"{file_path.stem}_image_{len(image_paths) + 1}.png"
+            image_path = (
+                self.temp_dir / f"{file_path.stem}_image_{len(image_paths) + 1}.png"
+            )
             image.save(str(image_path), format="PNG")
             image_paths.append(image_path)
 

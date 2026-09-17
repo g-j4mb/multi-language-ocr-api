@@ -4,8 +4,12 @@ from pydantic import BaseModel, Field
 
 
 class PerformanceMetrics(BaseModel):
-    total_time_ms: float = Field(..., description="Total end-to-end processing time in milliseconds")
-    ocr_time_ms: float = Field(..., description="Time spent in OCR processing in milliseconds")
+    total_time_ms: float = Field(
+        ..., description="Total end-to-end processing time in milliseconds"
+    )
+    ocr_time_ms: float = Field(
+        ..., description="Time spent in OCR processing in milliseconds"
+    )
     cpu_user_time: float = Field(..., description="User CPU time in seconds")
     cpu_system_time: float = Field(..., description="System CPU time in seconds")
     page_count: int = Field(..., description="Total number of pages/images processed")
@@ -23,7 +27,9 @@ class BoundingBox(BaseModel):
 class OCRPrediction(BaseModel):
     text: str = Field(..., description="Recognized text segment")
     confidence: float = Field(..., description="OCR confidence score between 0 and 1")
-    bbox: Optional[BoundingBox] = Field(None, description="Bounding box coordinates of the text")
+    bbox: Optional[BoundingBox] = Field(
+        None, description="Bounding box coordinates of the text"
+    )
 
 
 class OCRRow(BaseModel):
@@ -41,7 +47,13 @@ class OCRResponse(BaseModel):
     escalated: bool
     total_predictions: int
     average_confidence: float
-    extracted_text: Optional[str] = Field(None, description="Text extracted directly from Word documents")
+    extracted_text: Optional[str] = Field(
+        None, description="Text extracted directly from Word documents"
+    )
     predictions: List[OCRPrediction]
-    rows: Optional[List[OCRRow]] = Field(None, description="Predictions grouped by row (Y-coordinate)")
-    metrics: Optional[PerformanceMetrics] = Field(None, description="Performance metrics including timing and CPU usage")
+    rows: Optional[List[OCRRow]] = Field(
+        None, description="Predictions grouped by row (Y-coordinate)"
+    )
+    metrics: Optional[PerformanceMetrics] = Field(
+        None, description="Performance metrics including timing and CPU usage"
+    )

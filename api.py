@@ -5,14 +5,14 @@ import time
 import uuid
 from pathlib import Path
 from statistics import mean
-from typing import List
+from typing import List, Optional
 
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 
 from file_processors import FileProcessor
 from language_detector import LanguageDetector
 from ocr_service import OCRModelManager
-from schemas import OCRPrediction, OCRResponse, PerformanceMetrics
+from schemas import OCRPrediction, OCRResponse, OCRRow, PerformanceMetrics
 
 try:
     import psutil
@@ -36,14 +36,16 @@ language_detector = LanguageDetector()
 
 
 def _save_upload_file(upload_file: UploadFile, destination: Path) -> Path:
-    suffix = Path(upload_file.filename).suffix or ".bin"
+    suffix = Path(upload_file.filename or "").suffix or ".bin"
     dest_path = destination / f"{uuid.uuid4()}{suffix}"
     with dest_path.open("wb") as buffer:
         shutil.copyfileobj(upload_file.file, buffer)
     return dest_path
 
 
-def _combine_text(extracted_text: str, predictions: List[OCRPrediction]) -> str:
+def _combine_text(
+    extracted_text: Optional[str], predictions: List[OCRPrediction]
+) -> str:
     ocr_text = " ".join(pred.text for pred in predictions)
     combined = " ".join(filter(None, [extracted_text or "", ocr_text]))
     return combined.strip()
@@ -59,7 +61,12 @@ async def _detect_lang_for_ocr(text: str, fallback: str = DEFAULT_LANGUAGE) -> s
     return fallback if fallback != AUTO_LANGUAGE else "ar"
 
 
-async def _process_file(upload_file: UploadFile, confidence_threshold: float, lang: str, include_rows: bool = False) -> OCRResponse:
+async def _process_file(
+    upload_file: UploadFile,
+    confidence_threshold: float,
+    lang: str,
+    include_rows: bool = False,
+) -> OCRResponse:
     start_time = time.perf_counter()
     process = psutil.Process(os.getpid()) if psutil else None
     cpu_start = process.cpu_times() if process else None
@@ -84,12 +91,16 @@ async def _process_file(upload_file: UploadFile, confidence_threshold: float, la
         if lang == AUTO_LANGUAGE:
             lang = await _detect_lang_for_ocr(
                 extracted_text or "",
-                fallback="ar" if DEFAULT_LANGUAGE == AUTO_LANGUAGE else DEFAULT_LANGUAGE,
+                fallback=(
+                    "ar" if DEFAULT_LANGUAGE == AUTO_LANGUAGE else DEFAULT_LANGUAGE
+                ),
             )
             if lang == AUTO_LANGUAGE and image_paths:
                 preview_text = ocr_manager.detect_text(
                     str(image_paths[0]),
-                    lang="ar" if DEFAULT_LANGUAGE == AUTO_LANGUAGE else DEFAULT_LANGUAGE,
+                    lang=(
+                        "ar" if DEFAULT_LANGUAGE == AUTO_LANGUAGE else DEFAULT_LANGUAGE
+                    ),
                 )
                 lang = await _detect_lang_for_ocr(preview_text, fallback="ar")
 
@@ -115,8 +126,14 @@ async def _process_file(upload_file: UploadFile, confidence_threshold: float, la
 
             if include_rows and predictions:
                 rows = [
-                    {"y_start": r["y_start"], "y_end": r["y_end"], "items": [OCRPrediction(**item) for item in r["items"]]}
-                    for r in ocr_manager.group_predictions_into_rows([p.dict() for p in predictions])
+                    OCRRow(
+                        y_start=r["y_start"],
+                        y_end=r["y_end"],
+                        items=[OCRPrediction(**item) for item in r["items"]],
+                    )
+                    for r in ocr_manager.group_predictions_into_rows(
+                        [p.dict() for p in predictions]
+                    )
                 ]
 
         combined_text = _combine_text(extracted_text, predictions)
@@ -128,15 +145,19 @@ async def _process_file(upload_file: UploadFile, confidence_threshold: float, la
         metrics = PerformanceMetrics(
             total_time_ms=(end_time - start_time) * 1000,
             ocr_time_ms=ocr_time * 1000,
-            cpu_user_time=cpu_end.user - cpu_start.user if cpu_start and cpu_end else 0.0,
-            cpu_system_time=cpu_end.system - cpu_start.system if cpu_start and cpu_end else 0.0,
+            cpu_user_time=(
+                cpu_end.user - cpu_start.user if cpu_start and cpu_end else 0.0
+            ),
+            cpu_system_time=(
+                cpu_end.system - cpu_start.system if cpu_start and cpu_end else 0.0
+            ),
             page_count=page_count,
             image_count=image_count,
             recognized_words=len(predictions),
         )
 
         return OCRResponse(
-            filename=upload_file.filename,
+            filename=upload_file.filename or "unknown",
             file_type=file_data["file_type"],
             language=language_data["language"],
             language_confidence=language_data["confidence"],
@@ -169,7 +190,7 @@ async def predict_ocr(
         DEFAULT_LANGUAGE,
         min_length=2,
         max_length=10,
-        description="OCR language code, e.g. ar, fa, tr, en. Use 'auto' to detect language from extracted text when available.",
+        description="OCR language code, e.g. ar, fa, tr, en. Use 'auto' to detect from extracted text when available.",
     ),
     include_rows: bool = Query(
         False,
@@ -177,7 +198,9 @@ async def predict_ocr(
     ),
 ):
     try:
-        return await _process_file(file, confidence_threshold, lang.lower(), include_rows)
+        return await _process_file(
+            file, confidence_threshold, lang.lower(), include_rows
+        )
     except ValueError as value_error:
         raise HTTPException(status_code=415, detail=str(value_error))
     except Exception as exc:
@@ -197,7 +220,7 @@ async def predict_ocr_batch(
         DEFAULT_LANGUAGE,
         min_length=2,
         max_length=10,
-        description="OCR language code, e.g. ar, fa, tr, en. Use 'auto' to detect language from extracted text when available.",
+        description="OCR language code, e.g. ar, fa, tr, en. Use 'auto' to detect from extracted text when available.",
     ),
     include_rows: bool = Query(
         False,
@@ -206,7 +229,9 @@ async def predict_ocr_batch(
 ):
     results: List[OCRResponse] = []
     for file in files:
-        results.append(await _process_file(file, confidence_threshold, lang.lower(), include_rows))
+        results.append(
+            await _process_file(file, confidence_threshold, lang.lower(), include_rows)
+        )
     return results
 
 

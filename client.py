@@ -25,7 +25,7 @@ def predict_single_image(image_path):
     if not Path(image_path).exists():
         print(f"✗ File not found: {image_path}")
         return None
-    
+
     with open(image_path, "rb") as f:
         files = {"file": f}
         try:
@@ -47,20 +47,20 @@ def predict_batch(image_paths):
             files.append(("files", open(image_path, "rb")))
         else:
             print(f"✗ File not found: {image_path}")
-    
+
     if not files:
         return None
-    
+
     try:
         response = requests.post(f"{API_URL}/ocr/predict-batch", files=files)
         result = response.json()
-        print(f"✓ Batch OCR Results:")
+        print("✓ Batch OCR Results:")
         print(json.dumps(result, ensure_ascii=False, indent=2))
-        
+
         # Close all files
         for _, file_obj in files:
             file_obj.close()
-        
+
         return result
     except Exception as e:
         print(f"✗ Error: {e}")
@@ -71,7 +71,7 @@ def predict_batch(image_paths):
 
 if __name__ == "__main__":
     print("=== Multi-language OCR API Client ===\n")
-    
+
     # Check health
     if check_health():
         print("\n--- Testing Single Image Prediction ---")
